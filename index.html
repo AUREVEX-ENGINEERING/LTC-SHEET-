@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Lunch Time Robot Check Sheet</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout concept: a field form for a technician on a phone or tablet. Status strip on top, one card per robot axis
+   (S L U R B T), tap-to-mark OK/NG segments, sticky Confirm bar that turns the sheet into a one-page A4 PDF. */
+:root{
+  --bg:#EDF0F3; --surface:#FFFFFF; --surface-2:#F5F7F9; --ink:#13202C; --muted:#566676; --line:#D2D9E0;
+  --accent:#1D4E7E; --on-accent:#FFFFFF; --field:#FFFFFF; --focus:#2F7BC0; --paper:#FFFFFF;
+  --ok:#17794B; --ok-bg:#DCF2E5; --ng:#B93428; --ng-bg:#FBE1DD; --warn:#8A5A00; --warn-bg:#FFEFC7;
+  --on-solid:#FFFFFF; --shadow:0 1px 2px rgba(19,32,44,.08);
+  --f-display:"Bai Jamjuree","Noto Sans Thai","Sarabun",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans Thai","Noto Sans Thai","Sarabun",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E151C; --surface:#162029; --surface-2:#1B2733; --ink:#E5ECF2; --muted:#93A4B4; --line:#2B3A48;
+    --accent:#7DB2E2; --on-accent:#0B1620; --field:#101922; --focus:#7DB2E2; --paper:#FFFFFF;
+    --ok:#52C890; --ok-bg:#12331F; --ng:#FF8E7E; --ng-bg:#3C1A17; --warn:#E8BC52; --warn-bg:#382D0E;
+    --on-solid:#0B1620; --shadow:none; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E151C; --surface:#162029; --surface-2:#1B2733; --ink:#E5ECF2; --muted:#93A4B4; --line:#2B3A48;
+  --accent:#7DB2E2; --on-accent:#0B1620; --field:#101922; --focus:#7DB2E2; --paper:#FFFFFF;
+  --ok:#52C890; --ok-bg:#12331F; --ng:#FF8E7E; --ng-bg:#3C1A17; --warn:#E8BC52; --warn-bg:#382D0E;
+  --on-solid:#0B1620; --shadow:none; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-block:20px 0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.page{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+/* masthead */
+.mast{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 16px}
+.eyebrow{font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font:700 26px/1.1 var(--f-display);margin:2px 0 0;text-wrap:balance}
+.mast p{margin:2px 0 0;color:var(--muted)}
+.linkbtn{background:none;border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--muted);cursor:pointer;min-height:40px}
+.linkbtn:hover{color:var(--ink);border-color:var(--muted)}
+
+/* status strip */
+.status{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:var(--shadow)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.stat small{display:block;font-size:12px;color:var(--muted)}
+.stat b{font:600 22px var(--f-mono);font-variant-numeric:tabular-nums}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-weight:600;font-size:13px;background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+.pill.ok{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.pill.ng{background:var(--ng-bg);color:var(--ng);border-color:transparent}
+.pill.run{background:var(--warn-bg);color:var(--warn);border-color:transparent}
+.bar{height:6px;border-radius:99px;background:var(--surface-2);margin-top:12px;overflow:hidden;border:1px solid var(--line)}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+@media (max-width:520px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* sections */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow);min-width:0}
+.card>h2,.sec-h{font:600 17px var(--f-display);margin:0 0 4px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.card>h2 small,.sec-h small{font:400 13px var(--f-body);color:var(--muted)}
+.hint{color:var(--muted);font-size:13px;margin:0 0 12px}
+.f.full{grid-column:1/-1}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 14px;margin-top:12px}
+.f{display:flex;flex-direction:column;justify-content:flex-end;gap:4px;min-width:0}
+.f>span{font-size:13px;font-weight:500}
+.f>span i{font-style:normal;color:var(--muted);font-weight:400}
+.f>span em{font-style:normal;color:var(--ng)}
+input[type=text],input[type=number],input[type=date],textarea{width:100%;min-height:44px;padding:8px 10px;background:var(--field);border:1px solid var(--line);border-radius:8px}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.7}
+input[type=date]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;max-width:100%;height:44px;padding-block:0;line-height:1.2;text-align:left}
+input[type=date]::-webkit-date-and-time-value{text-align:left;min-height:1.2em;margin:0}
+input[type=date]::-webkit-datetime-edit{padding:0}
+.f>input,.f>.unit{min-width:0}
+input.bad{border-color:var(--ng);box-shadow:0 0 0 2px var(--ng-bg)}
+textarea{min-height:84px;resize:vertical}
+.unit{position:relative}
+.unit input{padding-right:34px;font-family:var(--f-mono)}
+.unit::after{content:"H";position:absolute;right:12px;top:50%;transform:translateY(-50%);font:500 13px var(--f-mono);color:var(--muted);pointer-events:none}
+
+/* segmented controls */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--field);flex-shrink:0}
+.seg button{min-width:46px;min-height:42px;padding:0 12px;border:0;border-left:1px solid var(--line);background:transparent;color:var(--muted);font:600 13px var(--f-mono);cursor:pointer}
+.seg button:first-child{border-left:0}
+.seg button.txt{font:500 14px var(--f-body);padding:0 14px}
+.seg button.on{background:var(--accent);color:var(--on-accent)}
+.seg button.on.ok{background:var(--ok);color:var(--on-solid)}
+.seg button.on.ng,.seg button.on.hot{background:var(--ng);color:var(--on-solid)}
+
+/* axis cards */
+.axes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:12px}
+.axis{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--surface)}
+.axis-h{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+.tile{width:40px;height:40px;border-radius:6px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font:700 22px var(--f-mono)}
+.axis-h div{flex:1;min-width:0}
+.axis-h b{display:block;font:600 16px/1.2 var(--f-display)}
+.axis-h span.sub{font-size:13px;color:var(--muted)}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.row .lbl b{display:block;font-weight:500;font-size:14px}
+.row .lbl small{color:var(--muted);font-size:12px}
+.row.off{opacity:.55}
+.row.off .tag{font:500 12px var(--f-mono);color:var(--muted)}
+.pair{display:grid;grid-template-columns:minmax(0,120px) minmax(0,1fr);gap:10px;align-items:end;padding:8px 0;border-top:1px solid var(--line)}
+.pair .f>span{font-size:12px;color:var(--muted)}
+.pair .seg{width:100%}.pair .seg button{flex:1;min-width:0;padding:0}
+@media (max-width:480px){.row.wide{grid-template-columns:1fr}.pair{grid-template-columns:1fr}}
+.note{margin-top:6px}
+
+.pair2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 24px}
+.periph .row:first-child,.q .row:first-child{border-top:0}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:0 24px}
+.quote-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px}
+
+/* signatures */
+.sigs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px;margin-top:10px}
+.sig canvas{display:block;width:100%;height:120px;background:var(--paper);border:1px dashed var(--muted);border-radius:8px;touch-action:none;cursor:crosshair}
+.sig-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:13px;font-weight:500}
+.sig-h button{background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;min-height:32px}
+
+/* sticky confirm bar */
+.bottom{position:sticky;bottom:0;z-index:5;margin:0 calc(-1 * max(16px,env(safe-area-inset-left,0px))) 0;
+  padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  background:var(--surface);border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.bottom .prog{font:500 13px var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.bottom .prog b{color:var(--ink)}
+.bottom .prog .n{color:var(--ng)}
+.primary{white-space:nowrap;background:var(--accent);color:var(--on-accent);border:0;border-radius:10px;min-height:48px;padding:0 22px;font:600 16px var(--f-display);cursor:pointer}
+.primary:disabled{opacity:.6;cursor:wait}
+.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:10px;min-height:46px;padding:0 18px;font-weight:500;cursor:pointer}
+.msg{color:var(--ng);font-size:13px;min-height:1px}
+
+/* overlays */
+.overlay[hidden]{display:none}
+.overlay{position:fixed;inset:0;z-index:20;background:rgba(8,14,20,.6);display:flex;align-items:center;justify-content:center;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.dlg{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;max-width:440px;width:100%}
+.dlg h3{margin:0 0 6px;font:600 18px var(--f-display)}
+.dlg p{margin:0 0 16px;color:var(--muted)}
+.dlg .acts{display:flex;gap:10px;flex-wrap:wrap}
+.result{align-items:flex-start;overflow:auto}
+.res-box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;width:100%;max-width:640px;margin:auto}
+.res-box h3{margin:0 0 4px;font:600 19px var(--f-display)}
+.res-box .status-line{margin:0 0 14px;color:var(--muted)}
+.res-box .acts{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.res-box img{display:block;width:100%;border:1px solid var(--line);border-radius:6px;background:#fff}
+
+/* off-screen A4 sheet that becomes the PDF (always light, like paper) */
+#stage{position:fixed;left:0;top:0;transform:translateX(-120%);width:794px;pointer-events:none}
+#report{width:794px;min-height:1123px;padding:26px 30px 24px;background:#fff;color:#142130;display:flex;flex-direction:column;gap:8px;
+  font-family:"IBM Plex Sans Thai","Noto Sans Thai","Sarabun",sans-serif;font-size:10.5px;line-height:1.35;
+  --p-navy:#1C3D61;--p-line:#B7C2CD;--p-soft:#EBF0F5;--p-ok:#14703F;--p-ng:#B3261E;--p-mut:#5F6E7C}
+#report h2,#report h3{font-family:"Bai Jamjuree","IBM Plex Sans Thai",sans-serif;margin:0}
+#report .r-title{background:var(--p-navy);color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
+#report .r-title h2{font-size:20px;letter-spacing:.02em}
+#report .r-title p{margin:1px 0 0;font-size:11px;opacity:.85}
+#report .r-ver{text-align:right;font:500 9px "IBM Plex Mono",monospace;opacity:.85}
+#report h3{font-size:11.5px;color:var(--p-navy);border-bottom:1.5px solid var(--p-navy);padding-bottom:2px;margin-top:4px}
+#report h3 small{font:400 9px "IBM Plex Sans Thai",sans-serif;color:var(--p-mut);margin-left:6px}
+#report .r-info{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--p-line);border-left:1px solid var(--p-line)}
+#report .r-info div{border-right:1px solid var(--p-line);border-bottom:1px solid var(--p-line);padding:3px 6px;min-height:28px}
+#report .r-info small{display:block;font-size:8px;color:var(--p-mut)}
+#report .r-info b{font-weight:500;font-size:10.5px;word-break:break-word}
+#report .r-sum{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+#report .r-sum div{background:var(--p-soft);padding:4px 8px;border-radius:3px}
+#report .r-sum small{display:block;font-size:8px;color:var(--p-mut)}
+#report .r-sum b{font:600 13px "IBM Plex Mono",monospace}
+#report table{border-collapse:collapse;width:100%;font-size:inherit;line-height:inherit}
+#report th,#report td{border:1px solid var(--p-line);padding:3px 4px;text-align:center;vertical-align:middle}
+#report th{background:var(--p-soft);font-size:8.5px;font-weight:600;line-height:1.2}
+#report th small{display:block;font-weight:400;color:var(--p-mut);font-size:7.5px}
+#report td.l{text-align:left}
+#report td.ax{font:700 12px "IBM Plex Mono",monospace;background:var(--p-soft);width:34px}
+#report .ok{color:var(--p-ok);font-weight:700}
+#report .ng{color:var(--p-ng);font-weight:700}
+#report .na{color:#9AA6B2}
+#report .r-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#report .r-box{border:1px solid var(--p-line);min-height:44px;padding:4px 6px;white-space:pre-wrap;word-break:break-word}
+#report .r-sign{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:auto}
+#report .r-sign div{border:1px solid var(--p-line);height:84px;padding:4px 8px;display:flex;flex-direction:column;justify-content:space-between}
+#report .r-sign small{font-size:8.5px;color:var(--p-mut)}
+#report .r-sign img{max-height:46px;max-width:100%;object-fit:contain;align-self:center}
+#report .r-foot{font:400 8px "IBM Plex Mono",monospace;color:var(--p-mut);text-align:right}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head><body>
+<main class="page" id="page">
+  <header class="mast">
+    <div>
+      <div class="eyebrow">ver. 2026-11</div>
+      <h1>Lunch Time Robot Check Sheet</h1>
+      <p>ใบตรวจเช็คหุ่นยนต์ · กรอกแล้วกด Confirm เพื่อได้ไฟล์ PDF หน้าเดียว</p>
+    </div>
+    <button type="button" class="linkbtn" id="resetBtn">เริ่มใบใหม่</button>
+  </header>
+
+  <section class="status" aria-label="สรุปผล">
+    <div class="stats">
+      <div class="stat"><small>รายการทั้งหมด</small><b id="sTotal">33</b></div>
+      <div class="stat"><small>ตรวจแล้ว</small><b id="sDone">0</b></div>
+      <div class="stat"><small>พบ NG</small><b id="sNg">0</b></div>
+      <div class="stat"><small>สถานะ</small><span class="pill" id="sPill">ยังไม่เริ่ม</span></div>
+    </div>
+    <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="sBar"><i id="sBarFill"></i></div>
+  </section>
+
+  <section class="card">
+    <h2>ข้อมูลลูกค้าและเครื่อง <small>Customer &amp; machine</small></h2>
+    <div class="fields" id="infoFields"></div>
+  </section>
+
+  <section class="card">
+    <h2>1) ตรวจแกนหุ่นยนต์ <small>Robot axis inspection</small></h2>
+    <p class="hint">แตะ OK หรือ NG ในแต่ละข้อ แตะซ้ำเพื่อยกเลิก · ความเร่งด่วน 1 = ต่ำ, 5 = สูง</p>
+    <div class="axes" id="axes"></div>
+  </section>
+
+  <section class="card periph">
+    <h2>2) อุปกรณ์รอบข้างและความสะอาด <small>Peripherals &amp; cleanliness</small></h2>
+    <div class="two" id="periph"></div>
+  </section>
+
+  <section class="card">
+    <h2>3) หมายเหตุ <small>Remark</small></h2>
+    <textarea id="remark" data-key="remark" placeholder="บันทึกสิ่งที่พบ หรือข้อเสนอแนะ"></textarea>
+  </section>
+
+  <section class="card">
+    <h2>4) ใบเสนอราคา <small>Quotation</small></h2>
+    <div class="row" style="border-top:0;margin-top:8px"><div class="lbl"><b>ลูกค้าต้องการใบเสนอราคาหรือไม่</b></div>
+      <div class="seg" role="group" aria-label="ใบเสนอราคา">
+        <button type="button" class="txt" data-key="quote" data-val="ต้องการ">ต้องการ</button>
+        <button type="button" class="txt" data-key="quote" data-val="ไม่ต้องการ">ไม่ต้องการ</button></div></div>
+    <div class="quote-fields">
+      <label class="f"><span>อีเมลที่ส่งใบเสนอราคา <i>Email</i></span><input type="text" inputmode="email" id="f-quoteEmail" data-key="quoteEmail" autocomplete="off"></label>
+      <label class="f"><span>เบอร์โทร <i>Tel.</i></span><input type="text" inputmode="tel" id="f-quotePhone" data-key="quotePhone" autocomplete="off"></label>
+    </div>
+  </section>
+
+  <section class="card q">
+    <h2>5) แบบสอบถาม <small>Customer questionnaire</small></h2>
+    <div id="questions"></div>
+  </section>
+
+  <section class="card">
+    <h2>6) ลายเซ็น <small>Signatures</small></h2>
+    <div class="sigs">
+      <div class="sig"><div class="sig-h"><span>ผู้ตรวจ / Engineer</span><button type="button" data-clear="sigEng">ล้าง</button></div><canvas id="padEng" aria-label="ช่องเซ็นชื่อผู้ตรวจ"></canvas></div>
+      <div class="sig"><div class="sig-h"><span>ลูกค้า / Customer</span><button type="button" data-clear="sigCus">ล้าง</button></div><canvas id="padCus" aria-label="ช่องเซ็นชื่อลูกค้า"></canvas></div>
+    </div>
+  </section>
+
+  <div class="bottom">
+    <div>
+      <div class="prog">ตรวจแล้ว <b id="bDone">0</b>/<b id="bTotal">33</b> · NG <b class="n" id="bNg">0</b></div>
+      <div class="msg" id="msg" role="alert"></div>
+    </div>
+    <button type="button" class="primary" id="confirmBtn">Confirm · PDF</button>
+  </div>
+</main>
+
+<div class="overlay" id="askDlg" hidden>
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="askT">
+    <h3 id="askT">ยังตรวจไม่ครบ</h3>
+    <p id="askP"></p>
+    <div class="acts"><button type="button" class="primary" id="askGo">สร้าง PDF ต่อ</button><button type="button" class="ghost" id="askBack">กลับไปกรอก</button></div>
+  </div>
+</div>
+
+<div class="overlay result" id="resultPanel" hidden>
+  <div class="res-box" role="dialog" aria-modal="true" aria-labelledby="resT">
+    <h3 id="resT">สร้าง PDF แล้ว</h3>
+    <p class="status-line" id="resStatus"></p>
+    <div class="acts">
+      <button type="button" class="primary" id="saveAgain">บันทึก PDF</button>
+      <button type="button" class="ghost" id="resBack">กลับไปแก้ไข</button>
+      <button type="button" class="ghost" id="resNew">เริ่มใบใหม่</button>
+    </div>
+    <img id="resImg" alt="ตัวอย่างใบตรวจเช็ค">
+  </div>
+</div>
+
+<div id="stage" aria-hidden="true"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+(function(){
+"use strict";
+var $=function(s,r){return (r||document).querySelector(s)};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+var STORE="ltc-robot-check-draft-v1";
+
+var INFO=[
+ ["customer","ลูกค้า","Customer","text",1],["date","วันที่ตรวจ","Date of check","date",0],
+ ["machineNo","เลขเครื่องลูกค้า","Customer machine no.","text",0],["engineer","ผู้ตรวจ","Name of engineer","text",1],
+ ["oNo","O/#","","text",0],["version","Version No.","","text",0],
+ ["motoman","MOTOMAN","รุ่นหุ่นยนต์","text",0],["motomanSn","MOTOMAN Serial No.","","text",0],
+ ["yasnac","YASNAC","ตู้ควบคุม","text",0],["yasnacSn","YASNAC Serial No.","","text",0],
+ ["controlPower","Control power time","","hours",0],["servoOn","Servo ON time","","hours",0],
+ ["playback","Playback time","","hours",0],["application","งาน","Application","text",0],
+ ["mfDate","วันผลิต","MF date","text",0],["contact","ผู้ติดต่อ","Contact name","text",0]
+];
+var FULL={customer:1,application:1,contact:1};
+var AXES=[
+ {k:"S",en:"Swivel",th:"ฐานหมุน",brake:false},{k:"L",en:"Lower arm",th:"แขนล่าง",brake:true},
+ {k:"U",en:"Upper arm",th:"แขนบน",brake:true},{k:"R",en:"Wrist roll",th:"ข้อมือหมุน",brake:false},
+ {k:"B",en:"Wrist bend",th:"ข้อมือก้ม",brake:true},{k:"T",en:"Wrist twist",th:"ข้อมือบิด",brake:false}
+];
+var CHECKS=[
+ {k:"noise",th:"เสียงผิดปกติ",en:"Abnormal noise",m:"ฟัง"},{k:"clear",th:"ระยะคลอน",en:"Clearance",m:"สัมผัส"},
+ {k:"vib",th:"การสั่น",en:"Vibration",m:"สัมผัส"},{k:"grease",th:"จารบีรั่ว",en:"Grease leakage",m:"มองด้วยตา"},
+ {k:"brake",th:"เบรก / แกนตก",en:"Brake axis fall",m:"มอง + วัด"}
+];
+var PERIPH=[
+ {k:"shock",th:"Tool Shock Sensor · ระยะคลอน",m:"สัมผัส"},{k:"fanPanel",th:"พัดลม Control Panel · เสียงผิดปกติ",m:"มอง + ฟัง"},
+ {k:"welderNoise",th:"Welder · เสียงผิดปกติ",m:"มอง + ฟัง"},{k:"dirtRobot",th:"ความสกปรก · Robot",m:"มองด้วยตา"},
+ {k:"dirtPanel",th:"ความสกปรก · Control Panel",m:"มองด้วยตา"},{k:"dirtWelder",th:"ความสกปรก · Welder",m:"มองด้วยตา"}
+];
+var QS=[
+ "ลูกค้าพึงพอใจกับกิจกรรมนี้หรือไม่","ลูกค้ามี budget สำหรับบำรุงรักษาหรือไม่",
+ "ลูกค้าสามารถป้องกันปัญหาที่จะเกิดขึ้นในอนาคตได้หรือไม่","ลูกค้ามีแผนที่จะเพิ่มหรือปรับปรุงไลน์ผลิตโดยใช้โรบอทหรือไม่"
+];
+var CHECK_KEYS=[];
+AXES.forEach(function(a){CHECKS.forEach(function(c){ if(c.k!=="brake"||a.brake) CHECK_KEYS.push(a.k+"."+c.k); });});
+PERIPH.forEach(function(p){CHECK_KEYS.push("p."+p.k);});
+var TOTAL=CHECK_KEYS.length;
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+
+var state={};
+try{var raw=localStorage.getItem(STORE); if(raw) state=JSON.parse(raw)||{};}catch(e){state={};}
+if(!state["info.date"]) state["info.date"]=today();
+var saveT=null;
+function save(){clearTimeout(saveT);saveT=setTimeout(function(){try{localStorage.setItem(STORE,JSON.stringify(state));}catch(e){}},250);}
+
+function seg(key,opts,aria,cls){
+  return '<div class="seg" role="group" aria-label="'+esc(aria)+'">'+opts.map(function(o){
+    return '<button type="button" class="'+(o.c||"")+(cls?" "+cls:"")+'" data-key="'+key+'" data-val="'+o.v+'">'+esc(o.l||o.v)+'</button>';
+  }).join("")+'</div>';
+}
+var OKNG=[{v:"OK",c:"ok"},{v:"NG",c:"ng"}];
+
+/* build form */
+$("#infoFields").innerHTML=INFO.map(function(f){
+  var lab=esc(f[1])+(f[2]?' <i>'+esc(f[2])+'</i>':'')+(f[4]?' <em>*</em>':'');
+  var inp;
+  if(f[3]==="hours") inp='<div class="unit"><input type="number" min="0" step="any" inputmode="decimal" id="f-'+f[0]+'" data-key="info.'+f[0]+'"></div>';
+  else inp='<input type="'+f[3]+'" id="f-'+f[0]+'" data-key="info.'+f[0]+'" autocomplete="off">';
+  return '<label class="f'+(FULL[f[0]]?' full':'')+'"><span>'+lab+'</span>'+inp+'</label>';
+}).join("");
+
+$("#axes").innerHTML=AXES.map(function(a){
+  var rows=CHECKS.map(function(c){
+    if(c.k==="brake"&&!a.brake) return '<div class="row off"><div class="lbl"><b>'+c.th+'</b><small>'+c.en+'</small></div><span class="tag">ไม่มีเบรก</span></div>';
+    return '<div class="row"><div class="lbl"><b>'+c.th+'</b><small>'+c.en+' · '+c.m+'</small></div>'+seg(a.k+"."+c.k,OKNG,a.k+" "+c.en)+'</div>';
+  }).join("");
+  return '<article class="axis" data-axis="'+a.k+'"><div class="axis-h"><span class="tile">'+a.k+'</span><div><b>'+a.en+'</b><span class="sub">'+a.th+'</span></div><span class="pill" data-res="'+a.k+'">—</span></div>'+rows+
+   '<div class="row wide"><div class="lbl"><b>เกียร์ทด</b><small>Reducer play</small></div>'+seg(a.k+".reducer",[{v:"Big",c:"txt"},{v:"Mid",c:"txt"},{v:"Little",c:"txt"}],a.k+" reducer play")+'</div>'+
+   '<div class="pair"><label class="f"><span>Pulse</span><input type="number" inputmode="numeric" step="any" id="f-'+a.k+'-pulse" data-key="'+a.k+'.pulse" style="font-family:var(--f-mono)"></label>'+
+   '<div class="f"><span>ความเร่งด่วน 1–5</span>'+seg(a.k+".urg",[1,2,3,4,5].map(function(n){return {v:String(n),c:n>=4?"hot":""}}),a.k+" urgency")+'</div></div>'+
+   '<div class="note"><input type="text" id="f-'+a.k+'-note" data-key="'+a.k+'.note" placeholder="หมายเหตุ '+a.k+'" autocomplete="off"></div></article>';
+}).join("");
+
+(function(){
+  var half=Math.ceil(PERIPH.length/2),cols=[PERIPH.slice(0,half),PERIPH.slice(half)];
+  $("#periph").innerHTML=cols.map(function(col){return '<div>'+col.map(function(p){
+    return '<div class="row"><div class="lbl"><b>'+p.th+'</b><small>'+p.m+'</small></div>'+seg("p."+p.k,OKNG,p.th)+'</div>';
+  }).join("")+'</div>';}).join("");
+})();
+
+$("#questions").innerHTML=QS.map(function(q,i){
+  return '<div class="row wide"><div class="lbl"><b>'+(i+1)+'. '+q+'</b></div>'+seg("q"+(i+1),[{v:"ใช่",c:"txt"},{v:"ไม่ใช่",c:"txt"}],q)+'</div>';
+}).join("");
+
+/* sync UI with state */
+var segBtns=$$("button[data-key][data-val]");
+function setInputs(){
+  $$("input[data-key],textarea[data-key]").forEach(function(el){el.value=state[el.dataset.key]||"";});
+}
+function sync(){
+  segBtns.forEach(function(b){var on=state[b.dataset.key]===b.dataset.val;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on?"true":"false");});
+  var done=0,ng=0;
+  CHECK_KEYS.forEach(function(k){var v=state[k];if(v==="OK"||v==="NG")done++;if(v==="NG")ng++;});
+  $("#sDone").textContent=done;$("#sNg").textContent=ng;$("#bDone").textContent=done;$("#bNg").textContent=ng;
+  $("#sTotal").textContent=TOTAL;$("#bTotal").textContent=TOTAL;
+  var pct=Math.round(done/TOTAL*100);$("#sBarFill").style.width=pct+"%";$("#sBar").setAttribute("aria-valuenow",pct);
+  var p=$("#sPill"),cls="pill",txt="ยังไม่เริ่ม";
+  if(ng>0){cls+=" ng";txt="พบจุดผิดปกติ";}else if(done===TOTAL){cls+=" ok";txt="ปกติทั้งหมด";}else if(done>0){cls+=" run";txt="กำลังตรวจ";}
+  p.className=cls;p.textContent=txt;
+  AXES.forEach(function(a){
+    var keys=CHECK_KEYS.filter(function(k){return k.indexOf(a.k+".")===0;});
+    var vals=keys.map(function(k){return state[k];}),n=vals.filter(function(v){return v==="OK"||v==="NG";}).length;
+    var el=$('[data-res="'+a.k+'"]'),c="pill",t="—";
+    if(vals.indexOf("NG")>=0){c+=" ng";t="NG";}else if(n===keys.length){c+=" ok";t="OK";}else if(n>0){c+=" run";t=n+"/"+keys.length;}
+    el.className=c;el.textContent=t;
+  });
+  return {done:done,ng:ng};
+}
+document.addEventListener("click",function(e){
+  var b=e.target.closest&&e.target.closest("button[data-key][data-val]");
+  if(!b) return;
+  var k=b.dataset.key;state[k]=state[k]===b.dataset.val?"":b.dataset.val;sync();save();
+});
+document.addEventListener("input",function(e){
+  var el=e.target;if(!el.dataset||!el.dataset.key||el.tagName==="BUTTON") return;
+  state[el.dataset.key]=el.value;el.classList.remove("bad");save();
+});
+
+/* signature pads */
+var pads={};
+function initPad(id,key){
+  var c=$(id),ctx=c.getContext("2d"),dpr=Math.max(1,window.devicePixelRatio||1),r=c.getBoundingClientRect();
+  c.width=Math.max(1,Math.round(r.width*dpr));c.height=Math.max(1,Math.round(r.height*dpr));
+  function style(){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.lineWidth=2.2;ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle="#0B1F33";}
+  style();
+  var down=false;
+  function pt(e){var b=c.getBoundingClientRect();return [e.clientX-b.left,e.clientY-b.top];}
+  c.addEventListener("pointerdown",function(e){down=true;c.setPointerCapture&&c.setPointerCapture(e.pointerId);var p=pt(e);ctx.beginPath();ctx.moveTo(p[0],p[1]);ctx.lineTo(p[0]+.01,p[1]);ctx.stroke();e.preventDefault();});
+  c.addEventListener("pointermove",function(e){if(!down)return;var p=pt(e);ctx.lineTo(p[0],p[1]);ctx.stroke();ctx.beginPath();ctx.moveTo(p[0],p[1]);});
+  function up(){if(!down)return;down=false;state[key]=c.toDataURL("image/png");save();}
+  c.addEventListener("pointerup",up);c.addEventListener("pointercancel",up);c.addEventListener("pointerleave",up);
+  pads[key]={clear:function(){ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,c.width,c.height);ctx.restore();state[key]="";save();},
+    restore:function(){if(!state[key])return;var im=new Image();im.onload=function(){ctx.drawImage(im,0,0,r.width,r.height);};im.src=state[key];}};
+  pads[key].restore();
+}
+$$("button[data-clear]").forEach(function(b){b.addEventListener("click",function(){pads[b.dataset.clear].clear();});});
+
+/* report (A4 sheet) */
+function mark(v){return v==="OK"?'<span class="ok">OK</span>':v==="NG"?'<span class="ng">NG</span>':'<span class="na">–</span>';}
+function buildReport(){
+  var g=function(k){return state[k]||"";};
+  var done=0,ng=0;CHECK_KEYS.forEach(function(k){var v=state[k];if(v==="OK"||v==="NG")done++;if(v==="NG")ng++;});
+  var overall=ng>0?"พบจุดผิดปกติ":done===TOTAL?"ปกติทั้งหมด":done>0?"ตรวจยังไม่ครบ":"ยังไม่ได้ตรวจ";
+  var info=INFO.map(function(f){var v=g("info."+f[0]);if(f[3]==="hours"&&v!=="")v=Number(v).toLocaleString("en-US")+" H";
+    return '<div><small>'+esc(f[1])+(f[2]?' / '+esc(f[2]):'')+'</small><b>'+(v===""?"&nbsp;":esc(v))+'</b></div>';}).join("");
+  var axRows=AXES.map(function(a){
+    var keys=CHECK_KEYS.filter(function(k){return k.indexOf(a.k+".")===0;}),vals=keys.map(function(k){return state[k];});
+    var res=vals.indexOf("NG")>=0?'<span class="ng">NG</span>':(vals.filter(function(v){return v==="OK";}).length===keys.length?'<span class="ok">OK</span>':'<span class="na">–</span>');
+    return '<tr><td class="ax">'+a.k+'</td><td>'+mark(g(a.k+".noise"))+'</td><td>'+mark(g(a.k+".clear"))+'</td><td>'+mark(g(a.k+".vib"))+'</td><td>'+mark(g(a.k+".grease"))+'</td><td>'+
+      (a.brake?mark(g(a.k+".brake")):'<span class="na">N/A</span>')+'</td><td>'+esc(g(a.k+".reducer")||"–")+'</td><td>'+esc(g(a.k+".pulse")||"–")+'</td><td>'+esc(g(a.k+".urg")||"–")+'</td><td>'+res+'</td><td class="l">'+esc(g(a.k+".note"))+'</td></tr>';
+  }).join("");
+  var half=Math.ceil(PERIPH.length/2);
+  function ptable(list){return '<table><tr><th>รายการ</th><th style="width:62px">วิธีตรวจ</th><th style="width:34px">ผล</th></tr>'+list.map(function(p){
+    return '<tr><td class="l">'+esc(p.th)+'</td><td>'+esc(p.m)+'</td><td>'+mark(g("p."+p.k))+'</td></tr>';}).join("")+'</table>';}
+  var qRows=QS.map(function(q,i){return '<tr><td class="l">'+(i+1)+'. '+esc(q)+'</td><td style="width:54px">'+esc(g("q"+(i+1))||"–")+'</td></tr>';}).join("");
+  var quoteTxt=g("quote")||"–";
+  var sig=function(k,label,name){return '<div><small>'+label+'</small>'+(g(k)?'<img src="'+g(k)+'" alt="">':'<span></span>')+'<small>'+esc(name)+'</small></div>';};
+  return '<div id="report">'+
+   '<div class="r-title"><div><h2>LUNCH TIME ROBOT CHECK SHEET</h2><p>ใบตรวจเช็คหุ่นยนต์</p></div><div class="r-ver">ver. 2026-11</div></div>'+
+   '<div class="r-info">'+info+'</div>'+
+   '<div class="r-sum"><div><small>รายการทั้งหมด</small><b>'+TOTAL+'</b></div><div><small>ตรวจแล้ว</small><b>'+done+'</b></div><div><small>พบ NG</small><b'+(ng?' class="ng"':'')+'>'+ng+'</b></div><div><small>ความคืบหน้า</small><b>'+Math.round(done/TOTAL*100)+'%</b></div><div><small>ผลรวม</small><b style="font-family:inherit;font-size:11px">'+overall+'</b></div></div>'+
+   '<h3>1) ตรวจแกนหุ่นยนต์<small>Robot axis inspection</small></h3>'+
+   '<table><tr><th style="width:34px">แกน</th><th>เสียงผิดปกติ<small>Abnormal noise</small></th><th>ระยะคลอน<small>Clearance</small></th><th>การสั่น<small>Vibration</small></th><th>จารบีรั่ว<small>Grease leak</small></th><th>เบรก/แกนตก<small>Brake fall</small></th><th style="width:44px">เกียร์ทด<small>Reducer</small></th><th style="width:48px">Pulse</th><th style="width:36px">เร่งด่วน<small>1–5</small></th><th style="width:34px">ผล</th><th style="width:110px">หมายเหตุ</th></tr>'+axRows+'</table>'+
+   '<h3>2) อุปกรณ์รอบข้างและความสะอาด<small>Peripherals &amp; cleanliness</small></h3>'+
+   '<div class="r-two"><div>'+ptable(PERIPH.slice(0,half))+'</div><div>'+ptable(PERIPH.slice(half))+'</div></div>'+
+   '<h3>3) หมายเหตุ<small>Remark</small></h3><div class="r-box">'+esc(g("remark"))+'</div>'+
+   '<h3>4) ใบเสนอราคา<small>Quotation</small></h3>'+
+   '<table><tr><td class="l" style="width:150px">ใบเสนอราคา: <b>'+esc(quoteTxt)+'</b></td><td class="l">อีเมล: '+esc(g("quoteEmail")||"–")+'</td><td class="l" style="width:170px">โทร: '+esc(g("quotePhone")||"–")+'</td></tr></table>'+
+   '<h3>5) แบบสอบถาม<small>Customer questionnaire</small></h3><table>'+qRows+'</table>'+
+   '<div class="r-sign">'+sig("sigEng","ลายเซ็นผู้ตรวจ / Engineer",g("info.engineer"))+sig("sigCus","ลายเซ็นลูกค้า / Customer",g("info.customer"))+'</div>'+
+   '<div class="r-foot">สร้างเมื่อ '+new Date().toLocaleString("th-TH",{dateStyle:"medium",timeStyle:"short"})+'</div>'+
+  '</div>';
+}
+
+/* PDF */
+var lastPdf=null;
+async function makePdf(){
+  if(!window.html2canvas||!window.jspdf) throw new Error("lib");
+  try{await document.fonts.ready;await Promise.all([document.fonts.load('600 12px "IBM Plex Sans Thai"'),document.fonts.load('400 12px "IBM Plex Sans Thai"'),document.fonts.load('700 12px "Bai Jamjuree"'),document.fonts.load('500 12px "IBM Plex Mono"')]);}catch(e){}
+  var stage=$("#stage");stage.innerHTML=buildReport();
+  var el=stage.firstElementChild;
+  var canvas=await window.html2canvas(el,{scale:2.2,backgroundColor:"#ffffff",useCORS:true,logging:false,scrollX:0,scrollY:0,windowWidth:794,
+    onclone:function(doc){var s=doc.getElementById("stage");if(s)s.style.transform="none";}});
+  var pdf=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait",compress:true});
+  var W=210,H=297,w=W,h=canvas.height*W/canvas.width;
+  if(h>H){h=H;w=canvas.width*H/canvas.height;}
+  pdf.addImage(canvas.toDataURL("image/jpeg",0.92),"JPEG",(W-w)/2,0,w,h);
+  stage.innerHTML="";
+  return {data:pdf.output("arraybuffer"),preview:canvas.toDataURL("image/jpeg",0.8)};
+}
+function fileName(){
+  var c=(state["info.customer"]||"").trim().replace(/[\\\/:*?"<>|\s]+/g,"_").slice(0,40)||"sheet";
+  return "RobotCheck_"+c+"_"+(state["info.date"]||today())+".pdf";
+}
+var downloadsNs=null,downloadsTried=false;
+async function getDownloads(){
+  if(downloadsTried) return downloadsNs;
+  downloadsTried=true;
+  try{downloadsNs=window.claude&&window.claude.use?await window.claude.use("downloads"):null;}catch(e){downloadsNs=null;}
+  return downloadsNs;
+}
+async function saveFile(){
+  var st=$("#resStatus"),d=await getDownloads();
+  if(!d){
+    try{
+      var url=URL.createObjectURL(new Blob([lastPdf.data],{type:"application/pdf"})),a=document.createElement("a");
+      a.href=url;a.download=fileName();document.body.appendChild(a);a.click();a.remove();
+      setTimeout(function(){URL.revokeObjectURL(url);},60000);
+      st.textContent="ดาวน์โหลด "+fileName()+" แล้ว ถ้าไม่เห็นไฟล์ให้ตรวจโฟลเดอร์ดาวน์โหลด หรือกด “บันทึก PDF” อีกครั้ง";
+    }catch(e){st.textContent="ดาวน์โหลดไม่สำเร็จ กด “บันทึก PDF” อีกครั้ง หรือแคปหน้าจอตัวอย่างด้านล่าง";}
+    return;
+  }
+  try{
+    await d.save({filename:fileName(),data:lastPdf.data.slice(0)});
+    st.textContent="บันทึก "+fileName()+" แล้ว";
+  }catch(err){
+    var c=err&&err.code;
+    st.textContent=c==="declined"?"ยังไม่ได้บันทึก กด “บันทึก PDF” เพื่อลองอีกครั้ง":
+      c==="rate_limited"?"รอสักครู่แล้วกด “บันทึก PDF” อีกครั้ง":"บันทึกไฟล์ในมุมมองนี้ไม่ได้ ใช้ตัวอย่างด้านล่างแทน";
+  }
+}
+function show(id,on){$(id).hidden=!on;}
+var busy=false;
+async function generate(){
+  if(busy) return;busy=true;
+  var btn=$("#confirmBtn");btn.disabled=true;btn.textContent="กำลังสร้าง PDF…";$("#msg").textContent="";
+  try{
+    lastPdf=await makePdf();
+    $("#resImg").src=lastPdf.preview;
+    $("#resStatus").textContent="ตรวจสอบตัวอย่าง แล้วบันทึกไฟล์";
+    show("#resultPanel",true);
+    await saveFile();
+  }catch(err){
+    $("#msg").textContent=(err&&err.message==="lib")?"โหลดตัวสร้าง PDF ไม่สำเร็จ ตรวจสอบอินเทอร์เน็ตแล้วลองอีกครั้ง":"สร้าง PDF ไม่สำเร็จ ลองอีกครั้ง";
+  }finally{busy=false;btn.disabled=false;btn.textContent="Confirm · PDF";}
+}
+$("#confirmBtn").addEventListener("click",function(){
+  var missing=INFO.filter(function(f){return f[4]&&!String(state["info."+f[0]]||"").trim();});
+  $$("input.bad").forEach(function(i){i.classList.remove("bad");});
+  if(missing.length){
+    missing.forEach(function(f){$("#f-"+f[0]).classList.add("bad");});
+    $("#msg").textContent="กรอก "+missing.map(function(f){return f[1];}).join(" และ ")+" ก่อน";
+    var first=$("#f-"+missing[0][0]);first.scrollIntoView({block:"center",behavior:"smooth"});first.focus({preventScroll:true});
+    return;
+  }
+  $("#msg").textContent="";
+  var s=sync(),left=TOTAL-s.done;
+  if(left>0){
+    $("#askP").textContent="ยังไม่ได้ตรวจ "+left+" รายการ รายการที่ว่างจะแสดงเป็น “–” ใน PDF";
+    show("#askDlg",true);$("#askBack").focus();
+  }else generate();
+});
+$("#askGo").addEventListener("click",function(){show("#askDlg",false);generate();});
+$("#askBack").addEventListener("click",function(){show("#askDlg",false);});
+$("#saveAgain").addEventListener("click",saveFile);
+$("#resBack").addEventListener("click",function(){show("#resultPanel",false);});
+
+/* reset (two taps) */
+var resetArm=null;
+function armReset(btn,label){
+  if(resetArm){clearTimeout(resetArm);resetArm=null;doReset();btn.textContent=label;return;}
+  btn.textContent="กดอีกครั้งเพื่อล้างทั้งหมด";
+  resetArm=setTimeout(function(){resetArm=null;btn.textContent=label;},4000);
+}
+function doReset(){
+  state={"info.date":today()};
+  setInputs();sync();save();
+  Object.keys(pads).forEach(function(k){pads[k].clear();});
+  show("#resultPanel",false);$("#msg").textContent="";window.scrollTo({top:0,behavior:"smooth"});
+}
+$("#resetBtn").addEventListener("click",function(){armReset(this,"เริ่มใบใหม่");});
+$("#resNew").addEventListener("click",function(){doReset();});
+
+setInputs();sync();
+initPad("#padEng","sigEng");initPad("#padCus","sigCus");
+})();
+</script>
+</body></html>
